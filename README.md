@@ -1,53 +1,193 @@
-# Claude Builders Bounty 🤖
+# Claude PR Review Agent 🤖
 
-> A community bounty board for Claude Code builders.
+AI-powered code review agent that analyzes GitHub pull requests using Claude AI and provides structured, actionable feedback.
 
-Building with Claude Code? Have tasks to delegate?
-Want to get paid for contributing to AI projects?
-You're in the right place.
+## Features
 
----
-
-## How it works
-
-**To post a bounty**
-1. Open a GitHub issue with a clear description and acceptance criteria
-2. Comment `/opire create $XXX` in the issue to set the reward
-3. Share the link — contributors will find it
-
-**To claim a bounty**
-1. Browse the open issues below
-2. Comment `/opire try` in the issue you want to work on
-3. Submit a PR — payment is automatic on merge ✅
+- ✅ **CLI Interface** — Simple command-line usage
+- ✅ **Structured Reviews** — Organized by Code Quality, Security, Performance, Testing
+- ✅ **Smart Error Handling** — Validates URLs, handles API failures gracefully
+- ✅ **Diff Size Management** — Warns on large diffs, chunks oversized content
+- ✅ **High Signal-to-Noise** — Concise, actionable insights (no fluff)
+- ✅ **Severity Ratings** — 🔴 Critical, 🟡 Moderate, 🟢 Minor
 
 ---
 
-## Active Bounties
+## Setup
 
-| # | Task | Amount | Status |
-|---|------|--------|--------|
-| [#1](../../issues/1) | SKILL: Generate a CHANGELOG from git history | $50 | 🟢 Open |
-| [#2](../../issues/2) | TEMPLATE: CLAUDE.md for a Next.js + SQLite project | $75 | 🟢 Open |
-| [#3](../../issues/3) | HOOK: Block destructive bash commands in Claude Code | $100 | 🟢 Open |
-| [#4](../../issues/4) | AGENT: PR reviewer with structured Markdown output | $150 | 🟢 Open |
-| [#5](../../issues/5) | WORKFLOW: n8n + Claude API — automated weekly dev summary | $200 | 🟢 Open |
+### 1. Download the Script
+
+```bash
+curl -O https://raw.githubusercontent.com/neo-sonicseeds/claude-builders-bounty/feat/pr-review-agent/claude-review-pr
+chmod +x claude-review-pr
+```
+
+### 2. Set API Keys
+
+**Required:**
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."  # Get from https://console.anthropic.com/
+```
+
+**Optional (to avoid GitHub rate limits):**
+```bash
+export GITHUB_TOKEN="ghp_..."  # Get from https://github.com/settings/tokens
+```
+
+### 3. Run
+
+```bash
+./claude-review-pr <pr-url>
+```
 
 ---
 
-## Rules
+## Usage
 
-- Tasks must be related to Claude Code or AI tooling
-- Every issue must have clear acceptance criteria before a bounty is activated
-- Payment is handled by [Opire](https://opire.dev) (Stripe)
-- Quality over speed — a solid PR beats a fast one
+### Basic Review
+
+```bash
+./claude-review-pr https://github.com/owner/repo/pull/123
+```
+
+### Example Output
+
+```
+🔍 Parsing PR URL...
+📦 Repository: facebook/react
+🔢 PR Number: #12345
+
+📥 Fetching PR diff...
+✅ Diff fetched (45230 chars)
+
+🤖 Analyzing with Claude AI...
+
+────────────────────────────────────────────────────────────────────────────────
+# PR Review: facebook/react#12345
+🔗 https://github.com/facebook/react/pull/12345
+
+## 🔍 Code Quality
+
+🟡 **Moderate**: Function `processUpdates` has high cyclomatic complexity
+- Consider extracting the switch statement into a strategy pattern
+- Lines 156-234
+
+🟢 **Minor**: Inconsistent error message formatting
+- Use consistent casing for user-facing messages
+- Lines 89, 102, 145
+
+## 🔒 Security
+
+🔴 **Critical**: Potential XSS vulnerability
+- User input not sanitized before rendering
+- Line 67: `innerHTML = userInput`
+- Use `textContent` or sanitize with DOMPurify
+
+## ⚡ Performance
+
+🟡 **Moderate**: Redundant array iteration
+- Array is mapped twice when single pass would suffice
+- Lines 201-215
+
+## 🧪 Testing
+
+🟢 **Minor**: Missing edge case tests
+- Add tests for empty array input
+- Add tests for undefined props
+
+────────────────────────────────────────────────────────────────────────────────
+
+✨ Review complete!
+```
 
 ---
 
-## Community
+## Error Handling
 
-- 🐦 X: [@ClaudeBounty](https://x.com/ClaudeBounty)
-- 📧 Contact: claudebounty@gmail.com
+The tool handles various failure scenarios gracefully:
+
+### Invalid PR URL
+```
+❌ Error: Invalid GitHub PR URL: invalid-url
+Expected format: https://github.com/owner/repo/pull/123
+```
+
+### PR Not Found
+```
+❌ Error: PR not found: owner/repo#999
+Check that the repository and PR number are correct.
+```
+
+### Rate Limit
+```
+❌ Error: GitHub API rate limit exceeded. Set GITHUB_TOKEN environment variable.
+```
+
+### Missing API Key
+```
+❌ Error: ANTHROPIC_API_KEY environment variable not set.
+Get your API key from https://console.anthropic.com/
+```
+
+### Oversized Diff
+```
+⚠️  Warning: Diff is very large (250.3 KB). Review may be incomplete.
+```
 
 ---
 
-*Started by the Claude builder community · March 2026 · MIT License*
+## Requirements
+
+- **Python 3.7+** (uses standard library only, no external dependencies)
+- **Anthropic API Key** (Claude access)
+- **GitHub Token** (optional, recommended for private repos or high usage)
+
+---
+
+## How It Works
+
+1. **Parses** the GitHub PR URL to extract owner, repo, and PR number
+2. **Fetches** the PR diff via GitHub REST API
+3. **Validates** diff size (warns if >100KB, chunks if >200KB)
+4. **Analyzes** the diff using Claude AI with a structured prompt
+5. **Outputs** a clean Markdown review with severity ratings
+
+---
+
+## Review Categories
+
+The agent evaluates PRs across four dimensions:
+
+| Category | Focus Areas |
+|----------|-------------|
+| **Code Quality** | Design patterns, readability, maintainability, complexity |
+| **Security** | Vulnerabilities, input validation, authentication, data exposure |
+| **Performance** | Algorithm efficiency, resource usage, scalability issues |
+| **Testing** | Test coverage, edge cases, test quality |
+
+---
+
+## Severity Ratings
+
+- 🔴 **Critical** — Must be fixed before merge (security, breaking changes)
+- 🟡 **Moderate** — Should be addressed (performance, maintainability)
+- 🟢 **Minor** — Nice to have (style, conventions, documentation)
+
+---
+
+## Limitations
+
+- **Diff Size**: Truncates diffs >200KB to stay within Claude API limits
+- **Context**: Analyzes only the diff, not the full codebase
+- **Language Support**: Works best with common languages (JS, Python, Go, etc.)
+- **Rate Limits**: Subject to GitHub and Anthropic API rate limits
+
+---
+
+## License
+
+MIT
+
+---
+
+**Built with ❤️ by [Neo](https://github.com/neo-sonicseeds) @ SonicSeeds**
