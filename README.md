@@ -1,193 +1,134 @@
-# Claude PR Review Agent 🤖
+# 🤖 Claude PR Review Agent
 
-AI-powered code review agent that analyzes GitHub pull requests using Claude AI and provides structured, actionable feedback.
-
-## Features
-
-- ✅ **CLI Interface** — Simple command-line usage
-- ✅ **Structured Reviews** — Organized by Code Quality, Security, Performance, Testing
-- ✅ **Smart Error Handling** — Validates URLs, handles API failures gracefully
-- ✅ **Diff Size Management** — Warns on large diffs, chunks oversized content
-- ✅ **High Signal-to-Noise** — Concise, actionable insights (no fluff)
-- ✅ **Severity Ratings** — 🔴 Critical, 🟡 Moderate, 🟢 Minor
+Automated GitHub Pull Request code review using Claude AI.
 
 ---
 
-## Setup
+## ✨ Features
 
-### 1. Download the Script
+- **CLI Tool**: Review PRs from the command line
+- **GitHub Action**: Automated PR reviews in CI/CD workflows
+- **Structured Output**: Summary, risks, suggestions, confidence score
+- **Zero Config**: Works with GitHub API (no local repo clone needed)
 
+---
+
+## 🚀 Quick Start
+
+### CLI Usage
+
+#### 1. Install Dependencies
 ```bash
-curl -O https://raw.githubusercontent.com/neo-sonicseeds/claude-builders-bounty/feat/pr-review-agent/claude-review-pr
-chmod +x claude-review-pr
+pip install -r requirements.txt
 ```
 
-### 2. Set API Keys
-
-**Required:**
+#### 2. Set Environment Variables
 ```bash
-export ANTHROPIC_API_KEY="sk-ant-..."  # Get from https://console.anthropic.com/
+export ANTHROPIC_API_KEY="your-api-key-here"
+export GITHUB_TOKEN="your-github-token"  # Optional, for private repos
 ```
 
-**Optional (to avoid GitHub rate limits):**
+#### 3. Run Review
 ```bash
-export GITHUB_TOKEN="ghp_..."  # Get from https://github.com/settings/tokens
+python claude_review.py --pr https://github.com/owner/repo/pull/123
 ```
 
-### 3. Run
+**Output Example:**
+```
+🔍 Fetching PR: https://github.com/owner/repo/pull/123
+📊 Files changed: 5 | +142 -38
+🤖 Analyzing with Claude...
 
-```bash
-./claude-review-pr <pr-url>
+================================================================================
+
+## 📋 Summary
+This PR refactors the authentication flow to use JWT tokens instead of sessions...
+
+## ⚠️ Identified Risks
+- Migration path for existing sessions not defined
+- Token expiration logic missing error handling
+- No rate limiting on token refresh endpoint
+
+## 💡 Improvement Suggestions
+- Add integration tests for token refresh flow
+- Document migration steps in CHANGELOG.md
+- Consider adding token revocation endpoint
+
+## 🎯 Confidence Score
+**High**
+
+Justification: Code is well-structured with clear intent, but production deployment needs migration strategy.
+
+================================================================================
+✅ Review complete
 ```
 
 ---
 
-## Usage
+### GitHub Action Usage
 
-### Basic Review
+#### 1. Add to Your Repository
+Create `.github/workflows/pr-review.yml`:
 
-```bash
-./claude-review-pr https://github.com/owner/repo/pull/123
+```yaml
+name: PR Review with Claude
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: neo-sonicseeds/pr-review-agent@main
+        with:
+          pr-url: ${{ github.event.pull_request.html_url }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-### Example Output
+#### 2. Add Secret
+Go to **Settings → Secrets → Actions** and add:
+- `ANTHROPIC_API_KEY`: Your Claude API key
 
-```
-🔍 Parsing PR URL...
-📦 Repository: facebook/react
-🔢 PR Number: #12345
+#### 3. Open a PR
+The action will automatically post a review comment! 🎉
 
-📥 Fetching PR diff...
-✅ Diff fetched (45230 chars)
+---
 
-🤖 Analyzing with Claude AI...
+## 📦 Requirements
 
-────────────────────────────────────────────────────────────────────────────────
-# PR Review: facebook/react#12345
-🔗 https://github.com/facebook/react/pull/12345
+- Python 3.11+
+- `anthropic` >= 0.34.0
+- `click` >= 8.1.0
+- Anthropic API key ([get one here](https://console.anthropic.com/))
 
-## 🔍 Code Quality
-
-🟡 **Moderate**: Function `processUpdates` has high cyclomatic complexity
-- Consider extracting the switch statement into a strategy pattern
-- Lines 156-234
-
-🟢 **Minor**: Inconsistent error message formatting
-- Use consistent casing for user-facing messages
-- Lines 89, 102, 145
-
-## 🔒 Security
-
-🔴 **Critical**: Potential XSS vulnerability
-- User input not sanitized before rendering
-- Line 67: `innerHTML = userInput`
-- Use `textContent` or sanitize with DOMPurify
-
-## ⚡ Performance
-
-🟡 **Moderate**: Redundant array iteration
-- Array is mapped twice when single pass would suffice
-- Lines 201-215
+---
 
 ## 🧪 Testing
 
-🟢 **Minor**: Missing edge case tests
-- Add tests for empty array input
-- Add tests for undefined props
-
-────────────────────────────────────────────────────────────────────────────────
-
-✨ Review complete!
-```
+See `examples/` for real PR review outputs:
+- [PR Example 1](examples/pr-example-1.md) — Refactoring PR
+- [PR Example 2](examples/pr-example-2.md) — Bug fix PR
 
 ---
 
-## Error Handling
+## 🛠️ How It Works
 
-The tool handles various failure scenarios gracefully:
-
-### Invalid PR URL
-```
-❌ Error: Invalid GitHub PR URL: invalid-url
-Expected format: https://github.com/owner/repo/pull/123
-```
-
-### PR Not Found
-```
-❌ Error: PR not found: owner/repo#999
-Check that the repository and PR number are correct.
-```
-
-### Rate Limit
-```
-❌ Error: GitHub API rate limit exceeded. Set GITHUB_TOKEN environment variable.
-```
-
-### Missing API Key
-```
-❌ Error: ANTHROPIC_API_KEY environment variable not set.
-Get your API key from https://console.anthropic.com/
-```
-
-### Oversized Diff
-```
-⚠️  Warning: Diff is very large (250.3 KB). Review may be incomplete.
-```
+1. **Fetch PR Diff**: Uses GitHub REST API to retrieve diff + metadata
+2. **Analyze with Claude**: Sends diff to Claude 3.5 Sonnet with structured prompt
+3. **Parse & Format**: Returns Markdown review with summary, risks, suggestions, confidence
 
 ---
 
-## Requirements
+## 💰 Bounty
 
-- **Python 3.7+** (uses standard library only, no external dependencies)
-- **Anthropic API Key** (Claude access)
-- **GitHub Token** (optional, recommended for private repos or high usage)
+This project was built for the [claude-builders-bounty](https://github.com/claude-builders-bounty/claude-builders-bounty/issues/4) $150 bounty.
 
 ---
 
-## How It Works
+## 📄 License
 
-1. **Parses** the GitHub PR URL to extract owner, repo, and PR number
-2. **Fetches** the PR diff via GitHub REST API
-3. **Validates** diff size (warns if >100KB, chunks if >200KB)
-4. **Analyzes** the diff using Claude AI with a structured prompt
-5. **Outputs** a clean Markdown review with severity ratings
-
----
-
-## Review Categories
-
-The agent evaluates PRs across four dimensions:
-
-| Category | Focus Areas |
-|----------|-------------|
-| **Code Quality** | Design patterns, readability, maintainability, complexity |
-| **Security** | Vulnerabilities, input validation, authentication, data exposure |
-| **Performance** | Algorithm efficiency, resource usage, scalability issues |
-| **Testing** | Test coverage, edge cases, test quality |
-
----
-
-## Severity Ratings
-
-- 🔴 **Critical** — Must be fixed before merge (security, breaking changes)
-- 🟡 **Moderate** — Should be addressed (performance, maintainability)
-- 🟢 **Minor** — Nice to have (style, conventions, documentation)
-
----
-
-## Limitations
-
-- **Diff Size**: Truncates diffs >200KB to stay within Claude API limits
-- **Context**: Analyzes only the diff, not the full codebase
-- **Language Support**: Works best with common languages (JS, Python, Go, etc.)
-- **Rate Limits**: Subject to GitHub and Anthropic API rate limits
-
----
-
-## License
-
-MIT
-
----
-
-**Built with ❤️ by [Neo](https://github.com/neo-sonicseeds) @ SonicSeeds**
+MIT © 2026 Neo @ SonicSeeds
